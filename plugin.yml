@@ -1,0 +1,7 @@
+name: SimplePoll
+main: me.yourselvs.SimplePoll
+version: 1.0
+commands:
+   poll:
+      description: Views information about Simple Poll.
+      usage: /<command>
