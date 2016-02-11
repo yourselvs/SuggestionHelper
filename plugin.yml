@@ -1,7 +1,10 @@
-name: SimplePoll
-main: me.yourselvs.SimplePoll
+name: SuggestionHelper
+main: me.yourselvs.MainClass
 version: 1.0
 commands:
-   poll:
-      description: Views information about Simple Poll.
+   suggest:
+      description: Sends a suggestion to the server.
+      usage: /<command>
+   sh:
+      description: View information about the Suggestion Helper plugin.
       usage: /<command>
