@@ -21,8 +21,8 @@ public class Suggestion{
 	
 	public void setID(String id){this.id = id;} 
 	
-	public void close(){isClosed = true;}
+	public void close(){isClosed = true; isSaved = false;}
 	public void open(){isClosed = false;}
-	public void save(){isSaved = true;}
+	public void save(){isSaved = true; isClosed = false;}
 	public void unsave(){isSaved = false;}
 }
