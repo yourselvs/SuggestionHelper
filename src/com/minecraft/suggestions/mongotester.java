@@ -9,7 +9,7 @@ public class mongotester {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		final String textUri = "mongodb://minecraft:MineCraft!@ds056288.mongolab.com:56288/minecraft";
+		final String textUri = "";
 
 		MongoDBStorage mongoStorage = new MongoDBStorage(textUri,"minecraft","suggestions");
 		
