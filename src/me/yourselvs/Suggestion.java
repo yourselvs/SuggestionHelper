@@ -3,18 +3,19 @@ package me.yourselvs;
 public class Suggestion{
 	private String id;
 	private String description;
-	private String player;
+	private String author;
+	private String manager;
 	private boolean isClosed;
 	private boolean isSaved;
 	
 	
 	public Suggestion(String ID, String description, String player, boolean isClosed, boolean isSaved)
-						{this.description = description; this.player = player; 
+						{this.description = description; this.author = player; 
 						this.isClosed = isClosed; this.isSaved = isSaved;}
 	
 	public String getID(){return id;}
 	public String getDescription(){return description;}
-	public String getPlayer(){return player;}
+	public String getPlayer(){return author;}
 	
 	public boolean isClosed(){return isClosed;}
 	public boolean isSaved(){return isSaved;}

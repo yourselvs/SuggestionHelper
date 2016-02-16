@@ -1,16 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre1.8.0_31"/>
-	<classpathentry kind="lib" path="D:/Games/Minecraft/Bukkit 1.8/1.8 Test Server/craftbukkit.jar">
+	<classpathentry kind="lib" path="C:/Users/Michael/GitHub/craftbukkit.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="https://hub.spigotmc.org/javadocs/bukkit/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/Michael/GitHub/gson-2.5.jar">
 		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:/Users/Michael/GitHub/gson-2.5-javadoc.jar!/"/>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Michael/GitHub/SuggestionHelper/jars/gson-2.5-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Michael/GitHub/mongodb-driver-3.2.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Michael/GitHub/SuggestionHelper/jars/mongodb-driver-3.2.1-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Users/Michael/GitHub/bson-3.0.4.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Michael/GitHub/mongodb-driver-core-3.2.1.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Michael/GitHub/mongo-java-driver-3.2.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

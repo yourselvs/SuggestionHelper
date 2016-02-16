@@ -1,4 +1,4 @@
-package com.minecraft.suggestions;
+package me.yourselvs;
 
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
@@ -31,27 +31,29 @@ public class MongoDBStorage {
 	public List<Document> findDocuments(String propertiesToFindJson) {
 		return findDocuments(Document.parse(propertiesToFindJson));
 	}
+	
 	public List<Document> findDocuments(Document propertiesToFind) {
 		return coll.find(propertiesToFind).into(new ArrayList<Document>());
 	}
 	
-	
 	public Document findDocument(Document propertiesToFind) {
 		return coll.find(propertiesToFind).first();
 	}
+	
 	public Document insertDocument(Document newDocument) {
 		coll.insertOne(newDocument);
 		return newDocument;
 	}
+	
 	public Document insertDocument(String newDocumentJson) {
 		return insertDocument( Document.parse(newDocumentJson));
 	}
-	
 	
 	public boolean updateDocument(Document docToFind, Document propertiesToUpdate) {
 		coll.updateMany(docToFind, propertiesToUpdate);
 		return true;
 	}
+	
 	public boolean updateDocument(String docToFind, String propertiesToUpdate) {
 		return updateDocument(Document.parse(docToFind), Document.parse(propertiesToUpdate));
 	}

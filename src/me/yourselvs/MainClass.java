@@ -129,7 +129,7 @@ public class MainClass extends JavaPlugin {
 			sendMessage(player, "Suggestion sent: " + suggestion);
 		}
 		else
-			sendMessage(player, "You must include a suggestion.");
+			sendMessage(player, "You must include a suggestion. Try \"/suggest <Text>\"");
 	}
 
 	private void processSh(CommandSender sender, String[] args) {
@@ -167,8 +167,6 @@ public class MainClass extends JavaPlugin {
 					processHelp(player);
 				else if(subcmd.equalsIgnoreCase("num"))
 					processNum(player);
-				else if(subcmd.equalsIgnoreCase("delete"))
-					processDelete(args, player);
 				else
 					processError(player);
 			}
@@ -443,15 +441,6 @@ public class MainClass extends JavaPlugin {
 		sendMessage(player, "There are " + ChatColor.YELLOW + getOpen().size() + ChatColor.RESET + " open suggestions.");
 		sendMessage(player, "There are " + ChatColor.YELLOW + getSaved().size() + ChatColor.RESET + " saved suggestions.");
 		sendMessage(player, "There are " + ChatColor.YELLOW + getClosed().size() + ChatColor.RESET + " closed suggestions.");
-	}
-
-	private void processDelete(String[] args, Player player) {
-		if(args.length > 1 && args[1].equalsIgnoreCase("CoNfIrM")){
-			initWriter();
-			allSuggestions.delete();
-		}
-		else
-			sendMessage(player, "" + ChatColor.RED + ChatColor.BOLD + "WARNING: " + ChatColor.RESET + ChatColor.DARK_RED + "Are you sure you want to delete all files? Type \"/sh delete CoNfIrM\" to confirm.");
 	}
 	
 	private List<Suggestion> getOpen(){

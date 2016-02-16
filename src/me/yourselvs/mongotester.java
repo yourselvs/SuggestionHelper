@@ -1,22 +1,24 @@
-package com.minecraft.suggestions;
-import com.minecraft.suggestions.MongoDBStorage;
-
-import java.util.ArrayList;
+package me.yourselvs;
 import org.bson.Document;
+
+import me.yourselvs.MongoDBStorage;
+
 import java.util.List;
 
 public class mongotester {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		final String textUri = "<connection string>";
+		final String textUri = "mongodb://yourselvs:hazecraft@ds056288.mongolab.com:56288/minecraft";
 
 		MongoDBStorage mongoStorage = new MongoDBStorage(textUri,"minecraft","suggestions");
 		
 		
-		Document counters = mongoStorage.findDocument(new Document("type","id"));
-		double highestId = counters.getDouble("highCount");
+		Document counters = mongoStorage.findDocument(new Document("type","counter"));
+		int highestId = counters.getInteger("highCount");
+		
 		System.out.println("high count: " + highestId);
+		
 		
 		
 		// sample suggestion
@@ -31,13 +33,13 @@ public class mongotester {
 		String newDoc = "{name:\"David\",age:48,type:\"person\"}";
 		mongoStorage.insertDocument(sampleSuggestion);
 		
-		mongoStorage.updateDocument("{type:\"id\"}", "{$inc: {highCount:1} }");
-		 counters = mongoStorage.findDocument(new Document("type","id"));
-		 highestId = counters.getDouble("highCount");
+		mongoStorage.updateDocument("{type:\"counter\"}", "{$inc: {highCount:1} }");
+		counters = mongoStorage.findDocument(new Document("type","counter"));
+		highestId = counters.getInteger("highCount");
 		System.out.println("high count got updated to: " + highestId);
 		
 		printDocumentList("Fetching every single doc in collection", mongoStorage.findDocuments(new Document()));
-
+		
 		Document agesDocString = Document.parse("{age:{$gt:40}, name: \"David\"}");
 		printDocumentList("Using document.parse",mongoStorage.findDocuments(agesDocString));
 		
@@ -56,6 +58,7 @@ public class mongotester {
 		
 		deletedCount = mongoStorage.deleteDocuments(new Document("type","suggestion"));
 		System.out.println("Deleted " + deletedCount + " suggestions.") ;
+		
 	}
 
 	private static void printDocumentList(String title, List<Document> documentList) {
