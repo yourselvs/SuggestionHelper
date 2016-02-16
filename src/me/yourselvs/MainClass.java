@@ -118,14 +118,18 @@ public class MainClass extends JavaPlugin {
 
 	private void processSuggest(CommandSender sender, String[] args) {
 		Player player = (Player) sender;
-		String suggestion = "";
-		for(String word : args)
-			suggestion = suggestion + word + " ";
-		map.add(new Suggestion(map.size() + "", suggestion, player.getName(), false, false));
-		map.get(map.size() - 1).setID(map.size() - 1 + "");;
-		if(args.length == 1)
-			writeFiles();
-		sendMessage(player, "Suggestion sent: " + suggestion);
+		if(args.length > 0){
+			String suggestion = "";
+			for(String word : args)
+				suggestion = suggestion + word + " ";
+			map.add(new Suggestion(map.size() + "", suggestion, player.getName(), false, false));
+			map.get(map.size() - 1).setID(map.size() - 1 + "");;
+			if(args.length == 1)
+				writeFiles();
+			sendMessage(player, "Suggestion sent: " + suggestion);
+		}
+		else
+			sendMessage(player, "You must include a suggestion.");
 	}
 
 	private void processSh(CommandSender sender, String[] args) {
