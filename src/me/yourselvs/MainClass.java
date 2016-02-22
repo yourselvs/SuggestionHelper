@@ -1,52 +1,98 @@
 package me.yourselvs;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.Writer;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+
+import org.bson.Document;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import com.google.gson.Gson;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 
 public class MainClass extends JavaPlugin {
 	
 	
 	final String prefix = "[" + ChatColor.GOLD + ChatColor.BOLD + "SH" + ChatColor.RESET + "]";
 	final String[] info = {prefix + " SuggestionHelper plugin v1.0", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
-	
-	final String allPath = "suggestions.json";
-	
 	final int pageSize = 6;
 	
-	List<Suggestion> map = new ArrayList<Suggestion>();
+	final String textUri = "mongodb://yourselvs:hazecraft@ds056288.mongolab.com:56288/minecraft";
+
+	MongoDBStorage mongoStorage;
 	
-	File dataFolder;
-	File allSuggestions;
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	
-	Writer allWriter;
+	final String suggestionType = "suggestion";
+	final String savedStatus = "saved";
+	final String openStatus = "open";
+	final String closedStatus = "closed";
 	
-	Gson gson;
+	public void setStatus(int id, String status) {
+		// Sets the status of a suggestion based on id
+		mongoStorage.updateDocument(new Document("type", "suggestion").append("id", id), new Document("status", status));
+	}
+
+	public String getStatus(int id) {
+		// Gets the status of a suggestion based on id
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("id", id)).getString("status");
+	}
 	
+	public int getHighestNum() {
+		// Gets the highestNum count
+		return mongoStorage.findDocument(new Document("type","counter")).getInteger("highCount");
+	}
+	
+	public String getAuthor(int num) {
+		// Gets the of a suggestion by id
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("id", num)).getString("author");
+	}
+	
+	public String getSuggestion(int num) {
+		// Gets the description of a suggestion by id
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("id", num)).getString("description");
+	}
+	
+	public List<Document> getOpenAndSaved() {
+		// Gets both open and saved suggestions in a list
+		List<Document> list = mongoStorage.findDocuments(new Document("status", openStatus));
+		list.addAll(mongoStorage.findDocuments(new Document("status", savedStatus)));
+		return list;
+	}
+	
+	public List<Document> getOpen() {
+		// Gets open suggestions in a list
+		return mongoStorage.findDocuments(new Document("status", openStatus));
+	}
+	public List<Document> getClosed(){
+		// Gets closed suggestions in a list
+		return mongoStorage.findDocuments(new Document("status", closedStatus));
+	}
+	public List<Document> getSaved(){
+		// Gets saved suggestions in a list
+		return mongoStorage.findDocuments(new Document("status", savedStatus));
+	}
+	
+	public void addSuggestion(Player player, String description) {
+		// Adds a suggestion based off of several variables
+		Document suggestion = new Document("type",suggestionType)
+				.append("description", description)
+				.append("author", player.getName())
+				.append("status", openStatus)
+				.append("time", sdf.format(new Date()))
+				.append("id", getHighestNum());
+		
+		mongoStorage.insertDocument(suggestion);
+	}
+	
+	public void addSuggestion(Document suggestion) {
+		mongoStorage.insertDocument(suggestion);
+	}
 	
 	@Override
 	public void onEnable() {
-		map = new ArrayList<Suggestion>();
-		gson = new Gson();
-		initFiles();
-		readFiles();
+		initDB();
 		
 		getLogger().info("SuggestionHelper successfully enabled.");
 	}
@@ -66,73 +112,24 @@ public class MainClass extends JavaPlugin {
 		return true;
 	}
 
-	private void initFiles() {
-		dataFolder = getDataFolder();
-		if(!dataFolder.exists())
-			dataFolder.mkdir();
-		
-		allSuggestions = new File(getDataFolder(), allPath);
-		if(!allSuggestions.exists())
-			try {allSuggestions.createNewFile();} catch (IOException e) {getLogger().info(e.getMessage());}
-	}
-	
-	private void initWriter() {		
-		try {
-			allWriter = new FileWriter(allSuggestions);
-		} catch (IOException e) {getLogger().info(e.getMessage());}
-	}
-	
-	@SuppressWarnings({"unchecked" })
-	private void readFiles() {
-		try {
-			Type type = new TypeToken<ArrayList<Suggestion>>(){}.getType();
-			Reader isReader = new InputStreamReader(new FileInputStream((allSuggestions)));
-			getLogger().info("Reading file.");
-			map = Collections.synchronizedList((ArrayList<Suggestion>)gson.fromJson(isReader, type));
-			
-			if(map == null){
-				getLogger().info("Empty file read in. Creating new one.");
-				map = new ArrayList<Suggestion>();
-				writeFiles();
-				readFiles();
-			}
-			
-			for(int i = 0; i < map.size(); i++)
-				map.get(i).setID(i + "");
-		} catch (JsonSyntaxException | JsonIOException | IOException e) {getLogger().info(e.getMessage());}
-	}
-	
-	private void writeFiles(){
-		initWriter();
-		try {
-			allWriter.write(gson.toJson(map));
-		} catch (IOException e) {getLogger().info(e.getMessage());}
-		closeFiles();
-	}
-	
-	private void closeFiles() {
-		try {
-			allWriter.close();
-		} catch (IOException e) {getLogger().info(e.getMessage());}
+	public void initDB() {
+		mongoStorage = new MongoDBStorage(textUri,"minecraft","suggestions");
 	}
 
-	private void processSuggest(CommandSender sender, String[] args) {
+	public void processSuggest(CommandSender sender, String[] args) {
 		Player player = (Player) sender;
 		if(args.length > 0){
 			String suggestion = "";
 			for(String word : args)
 				suggestion = suggestion + word + " ";
-			map.add(new Suggestion(map.size() + "", suggestion, player.getName(), false, false));
-			map.get(map.size() - 1).setID(map.size() - 1 + "");;
-			if(args.length == 1)
-				writeFiles();
+			addSuggestion(player, suggestion);
 			sendMessage(player, "Suggestion sent: " + suggestion);
 		}
 		else
 			sendMessage(player, "You must include a suggestion. Try \"/suggest <Text>\"");
 	}
 
-	private void processSh(CommandSender sender, String[] args) {
+	public void processSh(CommandSender sender, String[] args) {
 		Player player = (Player) sender;
 		
 		if(player.isOp()){
@@ -157,8 +154,6 @@ public class MainClass extends JavaPlugin {
 					processView(args, player);
 				else if(subcmd.equalsIgnoreCase("save"))
 					processSave(args, player);
-				else if(subcmd.equalsIgnoreCase("unsave"))
-					processUnsave(args, player);
 				else if(subcmd.equalsIgnoreCase("close"))
 					processClose(args, player);
 				else if(subcmd.equalsIgnoreCase("open"))
@@ -175,7 +170,7 @@ public class MainClass extends JavaPlugin {
 			player.sendMessage(info);
 	}
 	
-	private void processHelp(Player player) {
+	public void processHelp(Player player) {
 		sendMessage(player, ChatColor.YELLOW + "/sh" + ChatColor.RESET + " Views information about the SuggestionHelper plugin");
 		sendMessage(player, ChatColor.YELLOW + "/suggest <text>" + ChatColor.RESET + " Sends a suggestion to the server");
 		sendMessage(player, ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " Lists unclosed suggestions");
@@ -192,7 +187,7 @@ public class MainClass extends JavaPlugin {
 		sendMessage(player, ChatColor.YELLOW + "/sh delete" + ChatColor.RESET + " Gives the option to erase all files.");
 	}
 	
-	private void processSave(String[] args, Player player) {
+	public void processSave(String[] args, Player player) {
 		boolean proceed = true;
 		int save = -1;
 		if(args.length > 1){
@@ -200,37 +195,19 @@ public class MainClass extends JavaPlugin {
 				save = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
 		}
-		if(proceed && save >= 0 && save < map.size()){
-			if(map.get(save).isSaved())
+		if(proceed && save >= 0 && save < getHighestNum()){
+			if(getStatus(save).equals(savedStatus))
 				sendMessage(player, "This suggestion is already saved.");
 			else{
-				map.get(save).save();
+				setStatus(save, savedStatus);
 				sendMessage(player, "Suggestion " + ChatColor.YELLOW + save + ChatColor.RESET + " saved.");
-				writeFiles();
 			}
 		}
 	}
 	
-	private void processUnsave(String[] args, Player player) {
-		boolean proceed = true;
-		int save = -1;
-		if(args.length > 1){
-			try {
-				save = Integer.parseInt(args[1]);
-			} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
-		}
-		if(proceed && save >= 0 && save < map.size()){
-			if(!map.get(save).isSaved())
-				sendMessage(player, "This suggestion already isn't saved.");
-			else{
-				map.get(save).unsave();
-				sendMessage(player, "Suggestion " + ChatColor.YELLOW + save + ChatColor.RESET + " unsaved.");
-				writeFiles();
-			}
-		}
-	}
 	
-	private void processOpen(String[] args, Player player) {
+	
+	public void processOpen(String[] args, Player player) {
 		boolean proceed = true;
 		int open = -1;
 		if(args.length > 1){
@@ -238,18 +215,17 @@ public class MainClass extends JavaPlugin {
 				open = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
 		}
-		if(proceed && open >= 0 && open < map.size()){
-			if(!map.get(open).isClosed())
+		if(proceed && open >= 0 && open < getHighestNum()){
+			if(!getStatus(open).equals(openStatus))
 				sendMessage(player, "This suggestion is already open.");
 			else{
-				map.get(open).open();
+				setStatus(open, openStatus);
 				sendMessage(player, "Suggestion " + ChatColor.YELLOW + open + ChatColor.RESET + " opened.");
-				writeFiles();
 			}
 		}	
 	}
 	
-	private void processClose(String[] args, Player player) {
+	public void processClose(String[] args, Player player) {
 		boolean proceed = true;
 		int close = -1;
 		if(args.length > 1){
@@ -257,19 +233,18 @@ public class MainClass extends JavaPlugin {
 				close = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
 		}
-		if(proceed && close >= 0 && close < map.size()){
-			if(map.get(close).isClosed())
+		if(proceed && close >= 0 && close < getHighestNum()){
+			if(getStatus(close).equals(closedStatus))
 				sendMessage(player, "This suggestion is already saved.");
 			else{
-				map.get(close).close();
+				setStatus(close, closedStatus);
 				sendMessage(player, "Suggestion " + ChatColor.YELLOW + close + ChatColor.RESET + " closed.");
-				writeFiles();
 			}
 		}
 	}
 	
-	private void processList(String[] args, Player player) {
-		List<Suggestion> list = getOpen();
+	public void processList(String[] args, Player player) {
+		List<Document> list = getOpenAndSaved();
 		if(list.size() == 0)
 			sendMessage(player, "There are no " + ChatColor.GOLD + "OPEN" + ChatColor.RESET + " or " + ChatColor.GREEN + "SAVED" + ChatColor.RESET + " suggestions.");
 		else{
@@ -287,11 +262,11 @@ public class MainClass extends JavaPlugin {
 					if(i < list.size()){
 						String status;
 						
-						if(list.get(i).isSaved())
+						if(list.get(i).getString("status").equals(savedStatus))
 							status = ChatColor.GREEN + "SAVED";
 						else
 							status = ChatColor.GOLD + "OPEN";
-						sendMessage(player, "#" + list.get(i).getID() + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getPlayer() + ChatColor.RESET + " : " + status);
+						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET + " : " + status);
 					}
 				}
 				sendMessage(player, "Type " + ChatColor.YELLOW + ChatColor.RESET + "/sh list <page>" + ChatColor.RESET + " to see another page.");
@@ -302,8 +277,8 @@ public class MainClass extends JavaPlugin {
 		}
 	}
 	
-	private void processListSaved(String[] args, Player player) {
-		List<Suggestion> list = getSaved();
+	public void processListSaved(String[] args, Player player) {
+		List<Document> list = getSaved();
 		if(list.size() == 0)
 			sendMessage(player, "There are no " + ChatColor.GREEN + "SAVED" + ChatColor.RESET + " suggestions.");
 		else{
@@ -319,7 +294,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GREEN + "SAVED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getID() + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getPlayer());
+						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 			}
 			else
@@ -327,11 +302,11 @@ public class MainClass extends JavaPlugin {
 		}
 	}
 	
-	private void processListAll(String[] args, Player player) {
-		if(map.size() == 0)
+	public void processListAll(String[] args, Player player) {
+		if(getHighestNum() == 0)
 			sendMessage(player, "There are no suggestions.");
 		else {
-			int maxPage = (map.size() / pageSize) + 1;
+			int maxPage = (getHighestNum() / pageSize) + 1;
 			int pageNum = 1;
 			boolean proceed = true;
 			if(args.length > 1){
@@ -342,16 +317,16 @@ public class MainClass extends JavaPlugin {
 			if(proceed && pageNum > 0 && pageNum <= maxPage){
 				sendMessage(player, ChatColor.AQUA + "ALL " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++){
-					if(i < map.size()){
+					if(i < getHighestNum()){
 						String status;
 						
-						if(map.get(i).isClosed())
+						if(getStatus(i).equals(closedStatus))
 							status = ChatColor.RED + "CLOSED";
-						else if(map.get(i).isSaved())
+						else if(getStatus(i).equals(savedStatus))
 							status = ChatColor.GREEN + "SAVED";
 						else
 							status = ChatColor.GOLD + "OPEN";
-						sendMessage(player, "#" + map.get(i).getID() + " : " + ChatColor.YELLOW + ChatColor.ITALIC + map.get(i).getPlayer() + ChatColor.RESET + " : " + status);
+						sendMessage(player, "#" + i + " : " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i) + ChatColor.RESET + " : " + status);
 					}
 				}
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
@@ -362,8 +337,8 @@ public class MainClass extends JavaPlugin {
 		}
 	}
 	
-	private void processListOpen(String[] args, Player player) {
-		List<Suggestion> list = getOpenOnly();
+	public void processListOpen(String[] args, Player player) {
+		List<Document> list = getOpen();
 		if(list.size() == 0)
 			sendMessage(player, "There are no " + ChatColor.GOLD + "OPEN" + ChatColor.RESET + " suggestions.");
 		else {
@@ -379,7 +354,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GOLD + "OPEN " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getID() + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getPlayer());
+						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 			}
 			else
@@ -387,8 +362,9 @@ public class MainClass extends JavaPlugin {
 		}
 	}
 	
-	private void processListClosed(String[] args, Player player) {
-		List<Suggestion> list = getClosed();
+	public void processListClosed(String[] args, Player player) {
+		List<Document> list = getClosed();
+		
 		if(list.size() == 0)
 			sendMessage(player, "There are no " + ChatColor.RED + "CLOSED" + ChatColor.RESET + " suggestions");
 		else {
@@ -404,7 +380,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.RED + "CLOSED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getID() + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getPlayer());
+						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 				
 			}
@@ -413,74 +389,41 @@ public class MainClass extends JavaPlugin {
 		}
 	}
 	
-	private void processView(String[] args, Player player) {
+	public void processView(String[] args, Player player) {
 		int i = 0;
 		boolean proceed = true;
 		try {
 			i = Integer.parseInt(args[1]);
 		} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
 		
-		if(proceed && args.length > 1 && i >= 0 && i < map.size() && !(map.get(i) == null)){
+		if(proceed && args.length > 1 && i >= 0 && i < getHighestNum()){
 			String status;
 			
-			if(map.get(i).isClosed())
+			if(getStatus(i).equals(closedStatus))
 				status = ChatColor.RED + "CLOSED";
-			else if(map.get(i).isSaved())
+			else if(getStatus(i).equals(savedStatus))
 				status = ChatColor.GREEN + "SAVED";
 			else
 				status = ChatColor.GOLD + "OPEN";
-			sendMessage(player, "#" + map.get(i).getID() + " : " + ChatColor.YELLOW + ChatColor.ITALIC + map.get(i).getPlayer() + ChatColor.RESET + " : " + status + ChatColor.RESET + " : " + map.get(i).getDescription());
+			sendMessage(player, "#" + i + " : " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i) + ChatColor.RESET + " : " + status + ChatColor.RESET + " : " + getSuggestion(i));
 		}
 		else
 			sendMessage(player, "Error: Invalid ID");
 		
 	}
 
-	private void processNum(Player player) {
-		sendMessage(player, "There are " + ChatColor.YELLOW + map.size() + ChatColor.RESET + " total suggestions.");
+	public void processNum(Player player) {
+		sendMessage(player, "There are " + ChatColor.YELLOW + getHighestNum() + ChatColor.RESET + " total suggestions.");
 		sendMessage(player, "There are " + ChatColor.YELLOW + getOpen().size() + ChatColor.RESET + " open suggestions.");
 		sendMessage(player, "There are " + ChatColor.YELLOW + getSaved().size() + ChatColor.RESET + " saved suggestions.");
 		sendMessage(player, "There are " + ChatColor.YELLOW + getClosed().size() + ChatColor.RESET + " closed suggestions.");
 	}
 	
-	private List<Suggestion> getOpen(){
-		List<Suggestion> open = new ArrayList<Suggestion>();
-		for(Suggestion suggestion : map){
-			if(!suggestion.isClosed())
-				open.add(suggestion);
-		}
-		return open;
-	}
-	private List<Suggestion> getOpenOnly(){
-		List<Suggestion> open = new ArrayList<Suggestion>();
-		for(Suggestion suggestion : map){
-			if(!suggestion.isClosed() && !suggestion.isSaved())
-				open.add(suggestion);
-		}
-		return open;
-	}
-	private List<Suggestion> getClosed(){
-		List<Suggestion> closed = new ArrayList<Suggestion>();
-		for(Suggestion suggestion : map){
-			if(suggestion.isClosed())
-				closed.add(suggestion);
-		}
-		return closed;
-	}
-	private List<Suggestion> getSaved(){
-		List<Suggestion> saved = new ArrayList<Suggestion>();
-		for(Suggestion suggestion : map){
-			if(suggestion.isSaved())
-				saved.add(suggestion);
-		}
-		return saved;
-	}
-	
-	private void processError(Player player) {
+	public void processError(Player player) {
 		sendMessage(player, "Unknown command. Type " + ChatColor.YELLOW + "/sh help" + ChatColor.RESET + " to see a command list.");
 	}
 	
-	private void sendMessage(Player player, String line){
+	public void sendMessage(Player player, String line){
 		player.sendMessage(prefix + " " + line);
 	}
 }
