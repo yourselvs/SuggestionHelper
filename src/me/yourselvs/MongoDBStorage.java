@@ -63,7 +63,6 @@ public class MongoDBStorage {
 	}
 
 	public long deleteDocuments(Document docToDelete) {
-		// TODO Auto-generated method stub
 		return coll.deleteMany(docToDelete).getDeletedCount();
 	}
 
