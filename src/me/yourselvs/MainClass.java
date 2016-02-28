@@ -18,7 +18,7 @@ public class MainClass extends JavaPlugin {
 	final String[] info = {prefix + " SuggestionHelper plugin v1.0", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
 	final int pageSize = 6;
 	
-	final String textUri = "mongodb://yourselvs:hazecraft@ds056288.mongolab.com:56288/minecraft";
+	final String textUri = "mongodb://<username>:<password>@ds056288.mongolab.com:56288/minecraft";
 
 	MongoDBStorage mongoStorage;
 	
@@ -31,12 +31,13 @@ public class MainClass extends JavaPlugin {
 	
 	public void setStatus(int id, String status) {
 		// Sets the status of a suggestion based on id
-		mongoStorage.updateDocument(new Document("type", "suggestion").append("id", id), new Document("status", status));
+		//mongoStorage.updateDocument("{type:\"suggestion\", id:\"" + id + "\"}", "{$set: {status:\"" + status + "\"} }");
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("status", status)));
 	}
 
 	public String getStatus(int id) {
 		// Gets the status of a suggestion based on id
-		return mongoStorage.findDocument(new Document("type", "suggestion").append("id", id)).getString("status");
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("_id", id)).getString("status");
 	}
 	
 	public int getHighestNum() {
@@ -46,44 +47,61 @@ public class MainClass extends JavaPlugin {
 	
 	public String getAuthor(int num) {
 		// Gets the of a suggestion by id
-		return mongoStorage.findDocument(new Document("type", "suggestion").append("id", num)).getString("author");
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("_id", num)).getString("author");
 	}
 	
 	public String getSuggestion(int num) {
 		// Gets the description of a suggestion by id
-		return mongoStorage.findDocument(new Document("type", "suggestion").append("id", num)).getString("description");
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("_id", num)).getString("description");
 	}
 	
 	public List<Document> getOpenAndSaved() {
 		// Gets both open and saved suggestions in a list
-		List<Document> list = mongoStorage.findDocuments(new Document("status", openStatus));
-		list.addAll(mongoStorage.findDocuments(new Document("status", savedStatus)));
+		List<Document> list = mongoStorage.findDocuments(new Document("status", "open"));
+		list.addAll(mongoStorage.findDocuments(new Document("status", "saved")));
 		return list;
 	}
 	
 	public List<Document> getOpen() {
 		// Gets open suggestions in a list
-		return mongoStorage.findDocuments(new Document("status", openStatus));
+		return mongoStorage.findDocuments(new Document("status", "open"));
 	}
 	public List<Document> getClosed(){
 		// Gets closed suggestions in a list
-		return mongoStorage.findDocuments(new Document("status", closedStatus));
+		return mongoStorage.findDocuments(new Document("status", "closed"));
 	}
 	public List<Document> getSaved(){
 		// Gets saved suggestions in a list
-		return mongoStorage.findDocuments(new Document("status", savedStatus));
+		return mongoStorage.findDocuments(new Document("status", "saved"));
 	}
 	
-	public void addSuggestion(Player player, String description) {
+	public int updateSuggestions(){
+		mongoStorage.updateDocument("{type:\"counter\"}", "{$inc: {highCount:1} }");
+		
+		Document counters = mongoStorage.findDocument(new Document("type","counter"));
+		return counters.getInteger("highCount");
+	}
+	
+	public long deleteSuggestions(){
+		return mongoStorage.deleteDocuments(new Document("type","suggestion"));
+	}
+	
+	public long deleteFiles(){
+		return mongoStorage.deleteDocuments(new Document());
+	}
+	
+	public void addSuggestion(String player, String description) {
 		// Adds a suggestion based off of several variables
-		Document suggestion = new Document("type",suggestionType)
+		Document suggestion = new Document("type", "suggestion")
 				.append("description", description)
-				.append("author", player.getName())
-				.append("status", openStatus)
+				.append("author", player)
+				.append("status", "open")
 				.append("time", sdf.format(new Date()))
-				.append("id", getHighestNum());
+				.append("_id", getHighestNum());
 		
 		mongoStorage.insertDocument(suggestion);
+		
+		updateSuggestions();
 	}
 	
 	public void addSuggestion(Document suggestion) {
@@ -122,7 +140,7 @@ public class MainClass extends JavaPlugin {
 			String suggestion = "";
 			for(String word : args)
 				suggestion = suggestion + word + " ";
-			addSuggestion(player, suggestion);
+			addSuggestion(player.getName(), suggestion);
 			sendMessage(player, "Suggestion sent: " + suggestion);
 		}
 		else
@@ -266,7 +284,7 @@ public class MainClass extends JavaPlugin {
 							status = ChatColor.GREEN + "SAVED";
 						else
 							status = ChatColor.GOLD + "OPEN";
-						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET + " : " + status);
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET + " : " + status);
 					}
 				}
 				sendMessage(player, "Type " + ChatColor.YELLOW + ChatColor.RESET + "/sh list <page>" + ChatColor.RESET + " to see another page.");
@@ -294,7 +312,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GREEN + "SAVED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 			}
 			else
@@ -354,7 +372,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GOLD + "OPEN " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 			}
 			else
@@ -380,7 +398,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.RED + "CLOSED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 				
 			}
