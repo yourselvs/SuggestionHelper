@@ -1,29 +1,58 @@
 package me.yourselvs;
 import org.bson.Document;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import com.esotericsoftware.yamlbeans.YamlException;
+import com.esotericsoftware.yamlbeans.YamlReader;
+
 import me.yourselvs.MongoDBStorage;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public class mongotester {
-	static final String textUri = "mongodb://<username>:<password>@ds056288.mongolab.com:56288/minecraft";
-	static MongoDBStorage mongoStorage = new MongoDBStorage(textUri,"minecraft","suggestions");
+	static String textUri;
+	static MongoDBStorage mongoStorage;
 	static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	static Document counters = mongoStorage.findDocument(new Document("type","counter"));
+	static Document counters;
 
 	public static void main(String[] args) {		
-		System.out.println("high count: " + getHighestNum());
+		Object object = null;
+		try {
+		YamlReader reader = new YamlReader(new FileReader("config.yml"));
+			object = reader.read();
+		} catch (YamlException | FileNotFoundException e) {e.printStackTrace();}
+		
+	    System.out.println(object);
+	    Map map = (Map)object;
+	        
+		String username = (String) map.get("dbUser");
+		String password = (String) map.get("dbPass");
+		textUri = "mongodb://" + username + ":" + password + "@ds056288.mongolab.com:56288/minecraft";
+		mongoStorage = new MongoDBStorage(textUri,"minecraft","suggestions");
+		counters = mongoStorage.findDocument(new Document("type","counter"));
+		
+		//System.out.println("high count: " + getHighestNum());
 		printDocumentList("Fetching every single doc in collection", mongoStorage.findDocuments(new Document()));
-		addSuggestion("testPlayer", "test suggestion");
-		printDocumentList("Added suggestion", mongoStorage.findDocuments(new Document()));		
-		setStatus(getHighestNum() - 1, "saved");
-		printDocumentList("Changing last suggestion status", mongoStorage.findDocuments(new Document()));
-		System.out.println("Getting status of last suggestion: " + getStatus(getHighestNum() - 1));
-		System.out.println("Getting author of last suggestion: " + getAuthor(getHighestNum() - 1));
-		System.out.println("Getting description of last suggestion: " + getSuggestion(getHighestNum() - 1));
-		printDocumentList("Getting open and saved suggestions", getOpenAndSaved());
+		//addSuggestion("testPlayer", "test suggestion");
+		//printDocumentList("Added suggestion", mongoStorage.findDocuments(new Document()));		
+		//setStatus(getHighestNum() - 1, "saved");
+		//printDocumentList("Changing last suggestion status", mongoStorage.findDocuments(new Document()));
+		//System.out.println("Getting status of last suggestion: " + getStatus(getHighestNum() - 1));
+		//System.out.println("Getting author of last suggestion: " + getAuthor(getHighestNum() - 1));
+		//System.out.println("Getting description of last suggestion: " + getSuggestion(getHighestNum() - 1));
+		//printDocumentList("Getting open and saved suggestions", getOpenAndSaved());
+		mongoStorage.updateDocument(new Document("type", "counter"), new Document("$set",new Document("highCount", 0)));
+		
 		System.out.println("Deleted suggestions: " + deleteSuggestions());
+		printDocumentList("Fetching every single doc in collection", mongoStorage.findDocuments(new Document()));
+		
+		
 	}
 	
 	public static void setStatus(int id, String status) {

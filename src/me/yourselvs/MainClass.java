@@ -18,7 +18,7 @@ public class MainClass extends JavaPlugin {
 	final String[] info = {prefix + " SuggestionHelper plugin v1.0", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
 	final int pageSize = 6;
 	
-	final String textUri = "mongodb://<username>:<password>@ds056288.mongolab.com:56288/minecraft";
+	String textUri;
 
 	MongoDBStorage mongoStorage;
 	
@@ -31,7 +31,6 @@ public class MainClass extends JavaPlugin {
 	
 	public void setStatus(int id, String status) {
 		// Sets the status of a suggestion based on id
-		//mongoStorage.updateDocument("{type:\"suggestion\", id:\"" + id + "\"}", "{$set: {status:\"" + status + "\"} }");
 		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("status", status)));
 	}
 
@@ -110,7 +109,10 @@ public class MainClass extends JavaPlugin {
 	
 	@Override
 	public void onEnable() {
-		initDB();
+		String username = (String) getConfig().get("dbUser");
+		String password = (String) getConfig().get("dbPass");
+		textUri = "mongodb://" + username + ":" + password + "@ds056288.mongolab.com:56288/minecraft";
+		mongoStorage = new MongoDBStorage(textUri,"minecraft","suggestions");
 		
 		getLogger().info("SuggestionHelper successfully enabled.");
 	}
@@ -128,10 +130,6 @@ public class MainClass extends JavaPlugin {
 		else
 			return false;
 		return true;
-	}
-
-	public void initDB() {
-		mongoStorage = new MongoDBStorage(textUri,"minecraft","suggestions");
 	}
 
 	public void processSuggest(CommandSender sender, String[] args) {
@@ -198,11 +196,9 @@ public class MainClass extends JavaPlugin {
 		sendMessage(player, ChatColor.YELLOW + "/sh listopen <page>" + ChatColor.RESET + " Lists open and unsaved suggestions");
 		sendMessage(player, ChatColor.YELLOW + "/sh view <ID>" + ChatColor.RESET + " Views a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh save <ID>" + ChatColor.RESET + " Saves a suggestion by ID.");
-		sendMessage(player, ChatColor.YELLOW + "/sh unsave <ID>" + ChatColor.RESET + " Unsaves a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh close <ID>" + ChatColor.RESET + " Closes a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh open <ID>" + ChatColor.RESET + " Open a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh num" + ChatColor.RESET + " Gives the number of all open suggestions.");
-		sendMessage(player, ChatColor.YELLOW + "/sh delete" + ChatColor.RESET + " Gives the option to erase all files.");
 	}
 	
 	public void processSave(String[] args, Player player) {
