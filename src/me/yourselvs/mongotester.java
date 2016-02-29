@@ -1,8 +1,5 @@
 package me.yourselvs;
 import org.bson.Document;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
-
 import com.esotericsoftware.yamlbeans.YamlException;
 import com.esotericsoftware.yamlbeans.YamlReader;
 
@@ -29,7 +26,7 @@ public class mongotester {
 		} catch (YamlException | FileNotFoundException e) {e.printStackTrace();}
 		
 	    System.out.println(object);
-	    Map map = (Map)object;
+	    Map<?, ?> map = (Map<?, ?>)object;
 	        
 		String username = (String) map.get("dbUser");
 		String password = (String) map.get("dbPass");
