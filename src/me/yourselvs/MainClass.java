@@ -15,7 +15,7 @@ public class MainClass extends JavaPlugin {
 	
 	
 	final String prefix = "[" + ChatColor.GOLD + ChatColor.BOLD + "SH" + ChatColor.RESET + "]";
-	final String[] info = {prefix + " SuggestionHelper plugin v1.0", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
+	final String[] info = {prefix + " SuggestionHelper plugin v1.1", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
 	final int pageSize = 6;
 	
 	String textUri;
@@ -28,10 +28,24 @@ public class MainClass extends JavaPlugin {
 	final String savedStatus = "saved";
 	final String openStatus = "open";
 	final String closedStatus = "closed";
+	final String nullCloseReason = "<NULL>";
 	
-	public void setStatus(int id, String status) {
-		// Sets the status of a suggestion based on id
-		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("status", status)));
+	public void setOpen(int id, Player player) {
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("status", openStatus)));
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("closeReason", nullCloseReason)));
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("statusUpdater", player.getName())));
+	}
+	
+	public void setSaved(int id, Player player) {
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("status", savedStatus)));
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("closeReason", nullCloseReason)));
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("statusUpdater", player.getName())));
+	}
+	
+	public void setClosed(int id, String reason, Player player) {
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("status", closedStatus)));
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("closeReason", reason)));
+		mongoStorage.updateDocument(new Document("_id",id), new Document("$set",new Document("statusUpdater", player.getName())));
 	}
 
 	public String getStatus(int id) {
@@ -52,6 +66,14 @@ public class MainClass extends JavaPlugin {
 	public String getSuggestion(int num) {
 		// Gets the description of a suggestion by id
 		return mongoStorage.findDocument(new Document("type", "suggestion").append("_id", num)).getString("description");
+	}
+	
+	public String getClosedReason(int num) {
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("_id", num)).getString("closeReason");
+	}
+	
+	public String getStatusUpdater(int num) {
+		return mongoStorage.findDocument(new Document("type", "suggestion").append("_id", num)).getString("statusUpdater");
 	}
 	
 	public List<Document> getOpenAndSaved() {
@@ -96,7 +118,9 @@ public class MainClass extends JavaPlugin {
 				.append("author", player)
 				.append("status", "open")
 				.append("time", sdf.format(new Date()))
-				.append("_id", getHighestNum());
+				.append("_id", getHighestNum())
+				.append("closeReason", nullCloseReason)
+				.append("statusUpdater", player);
 		
 		mongoStorage.insertDocument(suggestion);
 		
@@ -196,25 +220,25 @@ public class MainClass extends JavaPlugin {
 		sendMessage(player, ChatColor.YELLOW + "/sh listopen <page>" + ChatColor.RESET + " Lists open and unsaved suggestions");
 		sendMessage(player, ChatColor.YELLOW + "/sh view <ID>" + ChatColor.RESET + " Views a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh save <ID>" + ChatColor.RESET + " Saves a suggestion by ID.");
-		sendMessage(player, ChatColor.YELLOW + "/sh close <ID>" + ChatColor.RESET + " Closes a suggestion by ID.");
+		sendMessage(player, ChatColor.YELLOW + "/sh close <ID> <reason>" + ChatColor.RESET + " Closes a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh open <ID>" + ChatColor.RESET + " Open a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh num" + ChatColor.RESET + " Gives the number of all open suggestions.");
 	}
 	
 	public void processSave(String[] args, Player player) {
 		boolean proceed = true;
-		int save = -1;
+		int docId = -1;
 		if(args.length > 1){
 			try {
-				save = Integer.parseInt(args[1]);
+				docId = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
 		}
-		if(proceed && save >= 0 && save < getHighestNum()){
-			if(getStatus(save).equals(savedStatus))
+		if(proceed && docId >= 0 && docId < getHighestNum()){
+			if(getStatus(docId).equals(savedStatus))
 				sendMessage(player, "This suggestion is already saved.");
 			else{
-				setStatus(save, savedStatus);
-				sendMessage(player, "Suggestion " + ChatColor.YELLOW + save + ChatColor.RESET + " saved.");
+				setSaved(docId, player);
+				sendMessage(player, "Suggestion " + ChatColor.YELLOW + docId + ChatColor.RESET + " saved.");
 			}
 		}
 	}
@@ -223,38 +247,47 @@ public class MainClass extends JavaPlugin {
 	
 	public void processOpen(String[] args, Player player) {
 		boolean proceed = true;
-		int open = -1;
+		int docId = -1;
 		if(args.length > 1){
 			try {
-				open = Integer.parseInt(args[1]);
+				docId = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
 		}
-		if(proceed && open >= 0 && open < getHighestNum()){
-			if(!getStatus(open).equals(openStatus))
+		if(proceed && docId >= 0 && docId < getHighestNum()){
+			if(getStatus(docId).equals(openStatus))
 				sendMessage(player, "This suggestion is already open.");
 			else{
-				setStatus(open, openStatus);
-				sendMessage(player, "Suggestion " + ChatColor.YELLOW + open + ChatColor.RESET + " opened.");
+				setOpen(docId, player);
+				sendMessage(player, "Suggestion " + ChatColor.YELLOW + docId + ChatColor.RESET + " opened.");
 			}
 		}	
 	}
 	
 	public void processClose(String[] args, Player player) {
 		boolean proceed = true;
-		int close = -1;
-		if(args.length > 1){
+		int docId = -1;
+		if(args.length > 2){
 			try {
-				close = Integer.parseInt(args[1]);
+				docId = Integer.parseInt(args[1]);
+				
 			} catch (NumberFormatException e) {proceed = false; e.printStackTrace();}
+			
 		}
-		if(proceed && close >= 0 && close < getHighestNum()){
-			if(getStatus(close).equals(closedStatus))
-				sendMessage(player, "This suggestion is already saved.");
+		else
+			proceed = false;
+		if(proceed && docId >= 0 && docId < getHighestNum()){
+			if(getStatus(docId).equals(closedStatus))
+				sendMessage(player, "This suggestion is already closed.");
 			else{
-				setStatus(close, closedStatus);
-				sendMessage(player, "Suggestion " + ChatColor.YELLOW + close + ChatColor.RESET + " closed.");
+				String reason = "";
+				for(int i = 2; i < args.length; i++)
+					reason = reason + args[i] + " ";
+				setClosed(docId, reason, player);
+				sendMessage(player, "Suggestion " + ChatColor.YELLOW + docId + ChatColor.RESET + " closed.");
 			}
 		}
+		else
+			sendMessage(player, "Correct format is \"/sh close <ID> <reason>\"");
 	}
 	
 	public void processList(String[] args, Player player) {
@@ -280,7 +313,7 @@ public class MainClass extends JavaPlugin {
 							status = ChatColor.GREEN + "SAVED";
 						else
 							status = ChatColor.GOLD + "OPEN";
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET + " : " + status);
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET + " | " + status);
 					}
 				}
 				sendMessage(player, "Type " + ChatColor.YELLOW + ChatColor.RESET + "/sh list <page>" + ChatColor.RESET + " to see another page.");
@@ -308,7 +341,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GREEN + "SAVED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 			}
 			else
@@ -340,7 +373,7 @@ public class MainClass extends JavaPlugin {
 							status = ChatColor.GREEN + "SAVED";
 						else
 							status = ChatColor.GOLD + "OPEN";
-						sendMessage(player, "#" + i + " : " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i) + ChatColor.RESET + " : " + status);
+						sendMessage(player, "#" + i + " | " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i) + ChatColor.RESET + " |/ " + status);
 					}
 				}
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
@@ -368,7 +401,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GOLD + "OPEN " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 			}
 			else
@@ -394,7 +427,7 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.RED + "CLOSED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " : " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
+						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
 				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
 				
 			}
@@ -419,7 +452,13 @@ public class MainClass extends JavaPlugin {
 				status = ChatColor.GREEN + "SAVED";
 			else
 				status = ChatColor.GOLD + "OPEN";
-			sendMessage(player, "#" + i + " : " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i) + ChatColor.RESET + " : " + status + ChatColor.RESET + " : " + getSuggestion(i));
+			sendMessage(player, "#" + i + " : " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i));
+			if(getStatus(i).equals(closedStatus))
+				sendMessage(player, "Status: " + status + ChatColor.RESET + " | " + getClosedReason(i));
+			else
+				sendMessage(player, "Status: " + status);
+			sendMessage(player, "Last updated by: " + ChatColor.YELLOW + getStatusUpdater(i));
+			sendMessage(player, "Suggestion: " + getSuggestion(i));
 		}
 		else
 			sendMessage(player, "Error: Invalid ID");
