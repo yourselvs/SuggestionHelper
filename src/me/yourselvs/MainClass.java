@@ -11,10 +11,17 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.mythicacraft.voteroulette.utils.InteractiveMessageAPI.FormattedText;
+import com.mythicacraft.voteroulette.utils.InteractiveMessageAPI.InteractiveMessage;
+import com.mythicacraft.voteroulette.utils.InteractiveMessageAPI.InteractiveMessageElement;
+import com.mythicacraft.voteroulette.utils.InteractiveMessageAPI.InteractiveMessageElement.ClickEvent;
+import com.mythicacraft.voteroulette.utils.InteractiveMessageAPI.InteractiveMessageElement.HoverEvent;
+
 public class MainClass extends JavaPlugin {
 	
 	
 	final String prefix = "[" + ChatColor.GOLD + ChatColor.BOLD + "SH" + ChatColor.RESET + "]";
+	final String linkPrefix = ChatColor.AQUA + "[" + ChatColor.GOLD + ChatColor.BOLD + "SH" + ChatColor.RESET + ChatColor.AQUA + "]" + ChatColor.RESET;
 	final String[] info = {prefix + " SuggestionHelper plugin v1.1", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
 	final int pageSize = 6;
 	
@@ -213,16 +220,15 @@ public class MainClass extends JavaPlugin {
 	public void processHelp(Player player) {
 		sendMessage(player, ChatColor.YELLOW + "/sh" + ChatColor.RESET + " Views information about the SuggestionHelper plugin");
 		sendMessage(player, ChatColor.YELLOW + "/suggest <text>" + ChatColor.RESET + " Sends a suggestion to the server");
-		sendMessage(player, ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " Lists unclosed suggestions");
-		sendMessage(player, ChatColor.YELLOW + "/sh listall <page>" + ChatColor.RESET + " Lists all suggestion.");
-		sendMessage(player, ChatColor.YELLOW + "/sh listsaved <page>" + ChatColor.RESET + " Lists saved suggestions");
-		sendMessage(player, ChatColor.YELLOW + "/sh listclosed <page>" + ChatColor.RESET + " Lists closed suggestions");
-		sendMessage(player, ChatColor.YELLOW + "/sh listopen <page>" + ChatColor.RESET + " Lists open and unsaved suggestions");
+		sendMessage(player, ChatColor.YELLOW + "/sh list" + ChatColor.RESET + " Lists unclosed suggestions");
+		sendMessage(player, ChatColor.YELLOW + "/sh listall" + ChatColor.RESET + " Lists all suggestion.");
+		sendMessage(player, ChatColor.YELLOW + "/sh listsaved" + ChatColor.RESET + " Lists saved suggestions");
+		sendMessage(player, ChatColor.YELLOW + "/sh listclosed" + ChatColor.RESET + " Lists closed suggestions");
+		sendMessage(player, ChatColor.YELLOW + "/sh listopen" + ChatColor.RESET + " Lists open and unsaved suggestions");
 		sendMessage(player, ChatColor.YELLOW + "/sh view <ID>" + ChatColor.RESET + " Views a suggestion by ID.");
-		sendMessage(player, ChatColor.YELLOW + "/sh save <ID>" + ChatColor.RESET + " Saves a suggestion by ID.");
-		sendMessage(player, ChatColor.YELLOW + "/sh close <ID> <reason>" + ChatColor.RESET + " Closes a suggestion by ID.");
-		sendMessage(player, ChatColor.YELLOW + "/sh open <ID>" + ChatColor.RESET + " Open a suggestion by ID.");
 		sendMessage(player, ChatColor.YELLOW + "/sh num" + ChatColor.RESET + " Gives the number of all open suggestions.");
+		player.sendMessage(ChatColor.GRAY + "(Click one)");
+		
 	}
 	
 	public void processSave(String[] args, Player player) {
@@ -313,11 +319,13 @@ public class MainClass extends JavaPlugin {
 							status = ChatColor.GREEN + "SAVED";
 						else
 							status = ChatColor.GOLD + "OPEN";
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET + " | " + status);
+						sendClickMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET + " | " + status, "Click to view suggestion #" + list.get(i).getInteger("_id"), "/sh view " + list.get(i).getInteger("_id"));
 					}
 				}
-				sendMessage(player, "Type " + ChatColor.YELLOW + ChatColor.RESET + "/sh list <page>" + ChatColor.RESET + " to see another page.");
-				
+				if(pageNum > 1)
+					sendClickMessage(player, ChatColor.YELLOW + "Previous page", "Click to view previous page", "/sh list " + (pageNum - 1));
+				if(pageNum < maxPage)
+					sendClickMessage(player, ChatColor.YELLOW + "Next page", "Click to view next page", "/sh list " + (pageNum + 1));
 			}
 			else
 				sendMessage(player, "Error: Invalid page.");
@@ -341,8 +349,11 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GREEN + "SAVED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
-				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
+						sendClickMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET, "Click to view suggestion #" + list.get(i).getInteger("_id"), "/sh view " + list.get(i).getInteger("_id"));
+				if(pageNum > 1)
+					sendClickMessage(player, ChatColor.YELLOW + "Previous page", "Click to view previous page", "/sh listsaved " + (pageNum - 1));
+				if(pageNum < maxPage)
+					sendClickMessage(player, ChatColor.YELLOW + "Next page", "Click to view next page", "/sh listsaved " + (pageNum + 1));
 			}
 			else
 				sendMessage(player, "Error: Invalid page.");
@@ -373,11 +384,13 @@ public class MainClass extends JavaPlugin {
 							status = ChatColor.GREEN + "SAVED";
 						else
 							status = ChatColor.GOLD + "OPEN";
-						sendMessage(player, "#" + i + " | " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i) + ChatColor.RESET + " |/ " + status);
+						sendClickMessage(player, "#" + i + " | " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i) + ChatColor.RESET + " | " + status, "Click to view suggestion #" + i, "/sh view " + i);
 					}
 				}
-				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
-				
+				if(pageNum > 1)
+					sendClickMessage(player, ChatColor.YELLOW + "Previous page", "Click to view previous page", "/sh listall " + (pageNum - 1));
+				if(pageNum < maxPage)
+					sendClickMessage(player, ChatColor.YELLOW + "Next page", "Click to view next page", "/sh listall " + (pageNum + 1));
 			}
 			else
 				sendMessage(player, "Error: Invalid page.");
@@ -401,8 +414,12 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.GOLD + "OPEN " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
-				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
+						sendClickMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET , "Click to view suggestion #" + list.get(i).getInteger("_id"), "/sh view " + list.get(i).getInteger("_id"));
+				
+				if(pageNum > 1)
+					sendClickMessage(player, ChatColor.YELLOW + "Previous page", "Click to view previous page", "/sh listopen " + (pageNum - 1));
+				if(pageNum < maxPage)
+					sendClickMessage(player, ChatColor.YELLOW + "Next page", "Click to view next page", "/sh listopen " + (pageNum + 1));
 			}
 			else
 				sendMessage(player, "Error: Invalid page.");
@@ -427,9 +444,12 @@ public class MainClass extends JavaPlugin {
 				sendMessage(player, ChatColor.RED + "CLOSED " + ChatColor.RESET + "suggestions. Page " + ChatColor.YELLOW + pageNum + ChatColor.RESET + " of " + ChatColor.YELLOW + maxPage);
 				for(int i = (pageNum - 1) * pageSize; i < ((pageNum - 1) * pageSize) + 6; i++)
 					if(i < list.size())
-						sendMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author"));
-				sendMessage(player, "Type " + ChatColor.YELLOW + "/sh list <page>" + ChatColor.RESET + " to see another page.");
-				
+						sendClickMessage(player, "#" + list.get(i).getInteger("_id") + " | " + ChatColor.YELLOW + ChatColor.ITALIC + list.get(i).getString("author") + ChatColor.RESET , "Click to view suggestion" + "#" + list.get(i).getInteger("_id"), "/sh view " + list.get(i).getInteger("_id"));
+
+				if(pageNum > 1)
+					sendClickMessage(player, ChatColor.YELLOW + "Previous page", "Click to view previous page", "/sh listclosed " + (pageNum - 1));
+				if(pageNum < maxPage)
+					sendClickMessage(player, ChatColor.YELLOW + "Next page", "Click to view next page", "/sh listclosed " + (pageNum + 1));
 			}
 			else
 				sendMessage(player, "Error: Invalid page.");
@@ -447,16 +467,28 @@ public class MainClass extends JavaPlugin {
 			String status;
 			
 			if(getStatus(i).equals(closedStatus))
-				status = ChatColor.RED + "CLOSED";
+				status = "" + ChatColor.RED + ChatColor.BOLD + "CLOSED" + ChatColor.RESET + " | OPEN | SAVED";
 			else if(getStatus(i).equals(savedStatus))
-				status = ChatColor.GREEN + "SAVED";
+				status = "CLOSED | OPEN | " + ChatColor.GREEN + ChatColor.BOLD + "SAVED";
 			else
-				status = ChatColor.GOLD + "OPEN";
-			sendMessage(player, "#" + i + " : " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i));
-			if(getStatus(i).equals(closedStatus))
-				sendMessage(player, "Status: " + status + ChatColor.RESET + " | " + getClosedReason(i));
-			else
-				sendMessage(player, "Status: " + status);
+				status = "CLOSED | " + ChatColor.GOLD + ChatColor.BOLD + "OPEN" + ChatColor.RESET + " | SAVED";
+			sendMessage(player, "Suggestion #" + i + " by: " + ChatColor.YELLOW + ChatColor.ITALIC + getAuthor(i));
+			
+			sendMessage(player, "Status: " + status);
+			if(getStatus(i).equals(closedStatus)){
+				sendMessage(player, "Reason for closing: " + getClosedReason(i));
+				sendClickMessage(player, "Click to " + ChatColor.GOLD + "OPEN", "Click to open suggestion #" + i, "/sh open " + i);
+				sendClickMessage(player, "Click to " + ChatColor.GREEN + "SAVE", "Click to save suggestion #" + i, "/sh save " + i);
+			}
+			if(getStatus(i).equals(openStatus)){
+				
+				sendSuggestMessage(player, "Click to " + ChatColor.RED + "CLOSE", "Click to close suggestion #" + i, "/sh close " + i + " ");
+				sendClickMessage(player, "Click to " + ChatColor.GREEN + "SAVE", "Click to save suggestion #" + i, "/sh save " + i);
+			}
+			if(getStatus(i).equals(savedStatus)){
+				sendSuggestMessage(player, "Click to " + ChatColor.RED + "CLOSE", "Click to close suggestion #" + i, "/sh close " + i + " ");
+				sendClickMessage(player, "Click to " + ChatColor.GOLD + "OPEN", "Click to open suggestion #" + i, "/sh open " + i);
+			}
 			sendMessage(player, "Last updated by: " + ChatColor.YELLOW + getStatusUpdater(i));
 			sendMessage(player, "Suggestion: " + getSuggestion(i));
 		}
@@ -466,17 +498,37 @@ public class MainClass extends JavaPlugin {
 	}
 
 	public void processNum(Player player) {
-		sendMessage(player, "There are " + ChatColor.YELLOW + getHighestNum() + ChatColor.RESET + " total suggestions.");
-		sendMessage(player, "There are " + ChatColor.YELLOW + getOpen().size() + ChatColor.RESET + " open suggestions.");
-		sendMessage(player, "There are " + ChatColor.YELLOW + getSaved().size() + ChatColor.RESET + " saved suggestions.");
-		sendMessage(player, "There are " + ChatColor.YELLOW + getClosed().size() + ChatColor.RESET + " closed suggestions.");
+		sendClickMessage(player, "There are " + ChatColor.YELLOW + getHighestNum() + ChatColor.RESET + " total suggestions.", "Click to view all suggestions", "/sh listall");
+		sendClickMessage(player, "There are " + ChatColor.YELLOW + getOpen().size() + ChatColor.RESET + " open suggestions.", "Click to view open suggestions", "/sh listopen");
+		sendClickMessage(player, "There are " + ChatColor.YELLOW + getSaved().size() + ChatColor.RESET + " saved suggestions.", "Click to view saved suggestions", "/sh listsaved");
+		sendClickMessage(player, "There are " + ChatColor.YELLOW + getClosed().size() + ChatColor.RESET + " closed suggestions.", "Click to view closed suggestions", "/sh listclosed");
 	}
 	
 	public void processError(Player player) {
-		sendMessage(player, "Unknown command. Type " + ChatColor.YELLOW + "/sh help" + ChatColor.RESET + " to see a command list.");
+		sendClickMessage(player, "Unknown command. Click here to see a command list.", "/sh help");
 	}
 	
 	public void sendMessage(Player player, String line){
 		player.sendMessage(prefix + " " + line);
+	}
+	
+	public void sendClickMessage(Player player, String line, String hoverMessage, String command){
+		InteractiveMessage message = new InteractiveMessage(new InteractiveMessageElement(new FormattedText(linkPrefix + " " + line), HoverEvent.SHOW_TEXT, new FormattedText(hoverMessage), ClickEvent.RUN_COMMAND, command));	
+		message.sendTo(player);
+	}
+	
+	public void sendClickMessage(Player player, String line, String command){
+		InteractiveMessage message = new InteractiveMessage(new InteractiveMessageElement(new FormattedText(linkPrefix + " " + line), HoverEvent.NONE, new FormattedText(""), ClickEvent.RUN_COMMAND, command));	
+		message.sendTo(player);
+	}
+	
+	public void sendSuggestMessage(Player player, String line, String hoverMessage, String command){
+		InteractiveMessage message = new InteractiveMessage(new InteractiveMessageElement(new FormattedText(linkPrefix + " " + line), HoverEvent.SHOW_TEXT, new FormattedText(hoverMessage), ClickEvent.SUGGEST_COMMAND, command));	
+		message.sendTo(player);
+	}
+
+	public void sendSuggestMessage(Player player, String line, String command){
+		InteractiveMessage message = new InteractiveMessage(new InteractiveMessageElement(new FormattedText(linkPrefix + " " + line), HoverEvent.NONE, new FormattedText(""), ClickEvent.SUGGEST_COMMAND, command));
+		message.sendTo(player);
 	}
 }
