@@ -22,7 +22,7 @@ public class MainClass extends JavaPlugin {
 	
 	final String prefix = "[" + ChatColor.GOLD + ChatColor.BOLD + "SH" + ChatColor.RESET + "]";
 	final String linkPrefix = ChatColor.AQUA + "[" + ChatColor.GOLD + ChatColor.BOLD + "SH" + ChatColor.RESET + ChatColor.AQUA + "]" + ChatColor.RESET;
-	final String[] info = {prefix + " SuggestionHelper plugin v1.1", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
+	final String[] info = {prefix + " SuggestionHelper plugin v1.2", prefix + " Created by " + ChatColor.YELLOW + "yourselvs"};
 	final int pageSize = 6;
 	
 	String textUri;
